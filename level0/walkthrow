@@ -1,0 +1,51 @@
+## 📄 Documentation: Flag Discovery Explanation
+
+**Objective:**
+To determine the condition under which the program grants elevated privileges and reveals the flag, by analyzing the `main` function’s assembly code in `gdb`.
+
+---
+
+**Methodology:**
+
+Using `gdb`, I disassembled the `main` function of the binary and reviewed its logic. The following key section was identified:
+
+```asm
+0x08048ed9 <+25>: cmp $0x1a7, %eax
+0x08048ede <+30>: jne 0x8048f58 <main+152>
+```
+
+This instruction compares the result of a call to `atoi(argv[1])` — converting the first program argument to an integer — with the hexadecimal value `0x1a7`. If the value does **not equal 0x1a7 (which is 423 in decimal)**, execution jumps to an alternative code path that outputs an error message using `fwrite`.
+
+If the comparison passes (the input is 423), the program continues execution through privilege escalation function calls:
+
+```asm
+call 0x8054680 <getegid>
+call 0x8054670 <geteuid>
+call 0x8054700 <setresgid>
+call 0x8054690 <setresuid>
+```
+
+This segment sets the real, effective, and saved UID and GID to the effective UID and GID values, which likely allows the program to run privileged operations.
+
+Finally, the program calls:
+
+```asm
+call 0x8054640 <execv>
+```
+
+To execute another binary, presumably granting access to the flag.
+
+---
+
+**Conclusion:**
+By reverse engineering the binary’s `main` function, I determined that **passing `423` as the argument is necessary to trigger the privileged execution path that ultimately reveals the flag**.
+
+**Final execution command:**
+
+```bash
+./levelXX 423
+```
+
+---
+
+Would you like a shorter or formatted Markdown/LaTeX version too? I can generate those as well.
